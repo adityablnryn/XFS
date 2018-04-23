@@ -5,4 +5,5 @@ import java.rmi.RemoteException;
 
 public interface Peer extends Remote{
     public void ping() throws RemoteException;
+    public void download(String fileName) throws RemoteException;
 }
