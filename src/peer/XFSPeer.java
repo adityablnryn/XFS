@@ -82,8 +82,8 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         try {
             preDownload();
             TrackingServer ts = (TrackingServer) Naming.lookup(trackingServerURL);
-            Set<Integer> availablePeers = ts.getPeerListForFile(fileName);
-            int optimalPeer = selectOptimalPeer(availablePeers);
+            Set<String> availablePeers = ts.find(fileName);
+            String optimalPeer = selectOptimalPeer(availablePeers);
             // TODO:
             // read from relevant file
             // convert contents to byte array
@@ -101,18 +101,18 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
      * @param availablePeers
      * @return
      */
-    private int selectOptimalPeer(Set<Integer> availablePeers){
-        int  minPeer = -1, minLoad = Integer.MAX_VALUE,
+    private String selectOptimalPeer(Set<String> availablePeers){
+        int   minLoad = Integer.MAX_VALUE,
                 maxLoad = Integer.MIN_VALUE;
+        String minPeer = "";
         float minLatency = Float.MAX_VALUE, maxLatency = Float.MIN_VALUE, minScore = Float.MAX_VALUE;
         try {
-
             /*
             First calculate the min and max values for latency and load among the available peers
              */
 
-            for(int peer : availablePeers){
-                Peer p = (Peer) Naming.lookup("peer" + peer);
+            for(String peer : availablePeers){
+                Peer p = (Peer) Naming.lookup(peer);
                 int currLoad = p.getLoad();
                 float currLatency = latencyMap.get(peer);
                 minLoad = Math.min(minLoad,currLoad);
@@ -126,8 +126,8 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             and select the peer with the lowest score.
              */
 
-            for(int peer : availablePeers){
-                Peer p = (Peer) Naming.lookup("peer" + peer);
+            for(String peer : availablePeers){
+                Peer p = (Peer) Naming.lookup(peer);
                 int currLoad = p.getLoad();
                 float currLatency = latencyMap.get(peer);
                 float normalizedLoad = minMaxNormalize((float) currLoad,(float) minLoad,(float) maxLoad);
@@ -135,7 +135,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 float currScore = normalizedLatency + normalizedLoad ;
                 if(currScore < minScore){
                     minScore = currScore;
-                    minPeer = peer;
+                    minPeer.concat(peer);
                 }
             }
         } catch (Exception e) {

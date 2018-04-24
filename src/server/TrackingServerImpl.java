@@ -38,10 +38,15 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
         return false;
     }
 
-    public List<String> find(String filename) {
-        //create a list with all relevant peer urls
-        // Step 1 - filePeersMap.get(filename)
-        // Step 2 - for each element in step 1, peerAddressMap.get()
+    public Set<String> find(String fileName) {
+        Set<String> peers = new HashSet<>();
+        if(filePeersMap.containsKey(fileName)){
+            for(int peer : filePeersMap.get(fileName)){
+                peers.add(peerAddressMap.get(peer));
+            }
+            return peers;
+        }
+        System.out.println("ERROR: File not present in any peer");
         return null;
     }
 
@@ -50,14 +55,6 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
         return false;
     }
 
-    public Set<Integer> getPeerListForFile(String fileName)
-    {
-        if(filePeersMap.containsKey(fileName)){
-            return filePeersMap.get(fileName);
-        }
-        System.out.println("ERROR: File not present in any peer");
-        return null;
-    }
 
 
     // TODO - update method to write id and url
