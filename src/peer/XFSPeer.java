@@ -3,7 +3,9 @@ package peer;
 import server.TrackingServer;
 
 import java.io.File;
+import java.net.MalformedURLException;
 import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Set;
@@ -65,19 +67,40 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         load--;
     }
 
-    public void download(String fileName){
+    public FileDownloadBundle download(String fileName){
 
         try {
             preDownload();
-            // implement this
+            // TODO:
+            // read from relevant file
+            // convert contents to byte array
+            // create wrapper class
+            // return
             postDownload();
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return null;
+    }
+
+    private boolean getFileFromPeer(String url, String filename) {
+        try {
+            Peer peerWithFile = (Peer) Naming.lookup(url);
+            FileDownloadBundle fileDownloadBundle = peerWithFile.download(filename);
+            // TODO: extract contents, write to file, update tracking servers
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public static void main(String[] args) {
         // implement UI here - Aditya
+        try {
+            XFSPeer thisPeer = new XFSPeer();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
