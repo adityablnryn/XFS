@@ -3,12 +3,14 @@ package peer;
 import server.TrackingServer;
 
 import java.io.File;
+import java.io.FileReader;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
+import java.util.Scanner;
 import java.util.Set;
 
 public class XFSPeer extends UnicastRemoteObject implements Peer {
@@ -20,9 +22,10 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     private File files[];
     private int load = 0;
     private String trackingServerURL = "//localhost/ts";
+    private String peerURL;
 
     //TODO: Implement reading latency matrix from file
-    private HashMap<Integer,Float> latencyMap = new HashMap<>();
+    private HashMap<String,Float> latencyMap = new HashMap<>();
 
     public XFSPeer() throws RemoteException{
         try{
@@ -30,9 +33,11 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
 
             peerId = ts.getNextPeerId();
             if(peerId != -1){
-                Naming.rebind("peer" + peerId, this);
+                peerURL = "peer" + peerId;
+                Naming.rebind(peerURL, this);
                 dir  = new File("./src/peer/data/peer" + peerId);
                 dir.mkdir();
+                populateLatencyMap();
                 System.out.println("INFO: Peer " + numPeers++ + " bound successfully");
             }
             else{
@@ -143,6 +148,23 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         }
         return minPeer;
 
+    }
+
+    private void populateLatencyMap(){
+        try{
+            Scanner scanner = new Scanner(new FileReader("./src/peer/latency.txt"));
+            while(scanner.hasNextLine()){
+                String line = scanner.nextLine();
+                String fields[] = line.split(";");
+                if(fields[0].equals(peerURL)){
+                    latencyMap.put(fields[1],Float.parseFloat(fields[2]));
+                }
+            }
+            System.out.println("INFO: Latency map successfully populated");
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     private boolean getFileFromPeer(String url, String filename) {
