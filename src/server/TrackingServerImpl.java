@@ -1,7 +1,6 @@
 package server;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.PrintStream;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
@@ -12,8 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TrackingServerImpl extends UnicastRemoteObject implements TrackingServer {
 
     private int nextPeerId = 0;
-    private ConcurrentHashMap<String, Set<Integer>> fileClientsMap = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<Integer, String> clientAddressMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Set<Integer>> filePeersMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, String> peerAddressMap = new ConcurrentHashMap<>();
     private File peerListFile = new File("./src/server/peerListFile.txt");
 
     public TrackingServerImpl() throws RemoteException {
@@ -33,14 +32,14 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
     }
 
     public boolean addPeer(int id, String url) {
-        clientAddressMap.put(id, url);
+        peerAddressMap.put(id, url);
         return false;
     }
 
     public List<String> find(String filename) {
         //create a list with all relevant peer urls
-        // Step 1 - fileClientsMap.get(filename)
-        // Step 2 - for each element in step 1, clientAddressMap.get()
+        // Step 1 - filePeersMap.get(filename)
+        // Step 2 - for each element in step 1, peerAddressMap.get()
         return null;
     }
 
