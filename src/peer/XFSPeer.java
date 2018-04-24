@@ -76,4 +76,8 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         }
     }
 
+    public static void main(String[] args) {
+        // implement UI here - Aditya
+    }
+
 }
