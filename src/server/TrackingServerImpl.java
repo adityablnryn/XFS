@@ -1,5 +1,7 @@
 package server;
 
+import peer.Peer;
+
 import java.io.File;
 import java.io.PrintStream;
 import java.rmi.Naming;
@@ -47,6 +49,16 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
         // look at each file and add peer Id to the set (brute force)
         return false;
     }
+
+    public Set<Integer> getPeerListForFile(String fileName)
+    {
+        if(filePeersMap.containsKey(fileName)){
+            return filePeersMap.get(fileName);
+        }
+        System.out.println("ERROR: File not present in any peer");
+        return null;
+    }
+
 
     // TODO - update method to write id and url
     private void writePeerToFile(){
