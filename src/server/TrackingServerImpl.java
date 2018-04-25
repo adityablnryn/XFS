@@ -1,7 +1,5 @@
 package server;
 
-import peer.Peer;
-
 import java.io.File;
 import java.io.PrintStream;
 import java.rmi.Naming;
@@ -50,7 +48,7 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
         return null;
     }
 
-    public boolean updateFileListForClient(int peerId, List<String> files) {
+    public boolean updateFileListForClient(int peerId, Set<String> files) {
         // look at each file and add peer Id to the set (brute force)
         return false;
     }

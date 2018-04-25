@@ -3,49 +3,53 @@ package peer;
 import server.TrackingServer;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.rmi.Naming;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
 
 public class XFSPeer extends UnicastRemoteObject implements Peer {
 
-    private static int numPeers = 0;
-
     private int peerId;
-    private File dir;
-    private File files[];
+    private File rootDir;
+    private Set<String> fileList; //TODO - use this variable
     private int load = 0;
     private String trackingServerURL = "//localhost/ts";
+    private TrackingServer ts;
     private String peerURL;
 
     //TODO: Implement reading latency matrix from file
     private HashMap<String,Float> latencyMap = new HashMap<>();
 
-    public XFSPeer() throws RemoteException{
+    public XFSPeer() throws RemoteException {
         try{
-            TrackingServer ts = (TrackingServer) Naming.lookup(trackingServerURL);
+            ts = (TrackingServer) Naming.lookup(trackingServerURL);
 
             peerId = ts.getNextPeerId();
             if(peerId != -1){
-                peerURL = "peer" + peerId;
+                peerURL = "peer" + peerId; //TODO - update peerURL
                 Naming.rebind(peerURL, this);
-                dir  = new File("./src/peer/data/peer" + peerId);
-                dir.mkdir();
+                rootDir  = new File("./src/peer/data/peer" + peerId);
+                rootDir.mkdir();
                 populateLatencyMap();
-                System.out.println("INFO: Peer " + numPeers++ + " bound successfully");
+                ts.addPeer(this.peerId, peerURL);
+                System.out.println("INFO: Peer " + peerId + " bound successfully");
             }
             else{
                 System.out.println("ERROR: Unable to create peer");
             }
         }
         catch (Exception e){
-            System.out.println("ERROR: Peer " + numPeers + " failed to bind");
+            System.out.println("ERROR: Peer " + peerId + " failed to bind");
             e.printStackTrace();
         }
     }
@@ -55,13 +59,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     }
 
     public Set<String> getListOfFiles() {
-        // return list of files
-        return null;
-    }
-
-    public File[] getFiles() {
-        files = dir.listFiles();
-        return files;
+        return fileList;
     }
 
     public int getLoad() {
@@ -86,15 +84,23 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
 
         try {
             preDownload();
-            TrackingServer ts = (TrackingServer) Naming.lookup(trackingServerURL);
-            Set<String> availablePeers = ts.find(fileName);
-            String optimalPeer = selectOptimalPeer(availablePeers);
-            // TODO:
-            // read from relevant file
+            // find relevant file
+            Path path = Paths.get("file_path_here"); //TODO - add file path
+
             // convert contents to byte array
+            byte[] fileContents = Files.readAllBytes(path);
+
             // create wrapper class
+            FileDownloadBundle fileDownloadBundle = new FileDownloadBundle();
+            fileDownloadBundle.fileName = fileName;
+            fileDownloadBundle.fileContents = fileContents;
+            Checksum checksum = new CRC32();
+            checksum.update(fileContents,0,fileContents.length);
+            fileDownloadBundle.checksum = checksum.getValue();
+
             // return
             postDownload();
+            return fileDownloadBundle;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -147,7 +153,6 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             e.printStackTrace();
         }
         return minPeer;
-
     }
 
     private void populateLatencyMap(){
@@ -167,11 +172,17 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         }
     }
 
-    private boolean getFileFromPeer(String url, String filename) {
+    private boolean getFileFromPeers(String fileName) {
         try {
-            Peer peerWithFile = (Peer) Naming.lookup(url);
-            FileDownloadBundle fileDownloadBundle = peerWithFile.download(filename);
-            // TODO: extract contents, write to file, update tracking servers
+            Set<String> availablePeers = ts.find(fileName);
+            String optimalPeer = selectOptimalPeer(availablePeers);
+            Peer peerWithFile = (Peer) Naming.lookup(optimalPeer);
+            FileDownloadBundle fileDownloadBundle = peerWithFile.download(fileName);
+            //TODO - add checksum verification
+            FileOutputStream fos = new FileOutputStream("path_here"+fileDownloadBundle.fileName); //TODO - add path
+            fos.write(fileDownloadBundle.fileContents);
+            fileList.add(fileDownloadBundle.fileName);
+            ts.updateFileListForClient(this.peerId, this.fileList);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -179,13 +190,32 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     }
 
     private float minMaxNormalize(float value, float min, float max){
-        return (float) (value - min)/(max - min);
+        return (value - min)/(max - min);
     }
 
     public static void main(String[] args) {
-        // implement UI here - Aditya
         try {
             XFSPeer thisPeer = new XFSPeer();
+            while (true) {
+                System.out.println("1 - GetList of files & 2 - Download file");
+                System.out.print("Enter your choice: ");
+                Scanner in = new Scanner(System.in);
+                int choice = in.nextInt();
+                switch (choice){
+                    case 1:
+                        //TODO - Get Files and print
+                        break;
+                    case 2:
+                        //TODO - Get Files and print
+                        System.out.print("Enter name of file to download: ");
+                        String fileToDownload = in.nextLine();
+                        thisPeer.getFileFromPeers(fileToDownload);
+                        break;
+                    default:
+                        System.out.println("Invalid Choice");
+                }
+                System.out.println("\n\n");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
