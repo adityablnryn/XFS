@@ -27,17 +27,17 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     private String trackingServerURL = "//localhost/ts";
     private TrackingServer ts;
     private String peerURL;
-    private HashMap<String,Float> latencyMap = new HashMap<>();
+    private HashMap<String, Float> latencyMap = new HashMap<>();
 
     public XFSPeer() throws RemoteException {
-        try{
+        try {
             ts = (TrackingServer) Naming.lookup(trackingServerURL);
 
             peerId = ts.getNextPeerId();
-            if(peerId != -1){
+            if (peerId != -1) {
                 peerURL = "peer" + peerId; //TODO - update peerURL
                 Naming.rebind(peerURL, this);
-                rootDir  = new File("./src/peer/data/peer" + peerId);
+                rootDir = new File("./src/peer/data/peer" + peerId);
                 rootDir.mkdir();
                 fileNameSet = new HashSet<>();
                 updateFileNameSet();
@@ -45,18 +45,16 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 ts.addPeer(this.peerId, this.peerURL);
                 ts.updateFileListForClient(this.peerId, this.fileNameSet);
                 System.out.println("INFO: Peer " + peerId + " bound successfully");
-            }
-            else{
+            } else {
                 System.out.println("ERROR: Unable to create peer");
             }
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             System.out.println("ERROR: Peer " + peerId + " failed to bind");
             e.printStackTrace();
         }
     }
 
-    public void ping(){
+    public void ping() {
         System.out.println("INFO: Peer " + this.peerId + ": PING!");
     }
 
@@ -68,26 +66,25 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         return load;
     }
 
-    private synchronized void preDownload(){
+    private synchronized void preDownload() {
         load++;
     }
 
-    private synchronized void postDownload(){
+    private synchronized void postDownload() {
         load--;
     }
 
     /**
-     *
      * @param fileName
      * @return
      */
 
-    public FileDownloadBundle download(String fileName){
+    public FileDownloadBundle download(String fileName) {
 
         try {
             preDownload();
             // find relevant file
-            Path path = Paths.get("./src/peer/data/peer"+peerId+"/"+fileName); //TODO - add file path
+            Path path = Paths.get("./src/peer/data/peer" + peerId + "/" + fileName); //TODO - add file path
 
             // convert contents to byte array
             byte[] fileContents = Files.readAllBytes(path);
@@ -97,7 +94,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             fileDownloadBundle.fileName = fileName;
             fileDownloadBundle.fileContents = fileContents;
             Checksum checksum = new CRC32();
-            checksum.update(fileContents,0,fileContents.length);
+            checksum.update(fileContents, 0, fileContents.length);
             fileDownloadBundle.checksum = checksum.getValue();
 
             // return
@@ -111,10 +108,11 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
 
     /**
      * To select the optimal peer based on load and latency using min-max normalization
+     *
      * @param availablePeers
      * @return
      */
-    private String selectOptimalPeer(Set<String> availablePeers){
+    private String selectOptimalPeer(Set<String> availablePeers) {
         int minLoad = Integer.MAX_VALUE,
                 maxLoad = Integer.MIN_VALUE;
         String minPeer = "";
@@ -123,15 +121,15 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             /*
             First calculate the min and max values for latency and load among the available peers
              */
-            if(availablePeers.size() > 1){
-                for(String peer : availablePeers){
+            if (availablePeers.size() > 1) {
+                for (String peer : availablePeers) {
                     Peer p = (Peer) Naming.lookup(peer);
                     int currLoad = p.getLoad();
                     float currLatency = latencyMap.get(peer);
-                    minLoad = Math.min(minLoad,currLoad);
-                    minLatency = Math.min(minLatency,currLatency);
-                    maxLoad = Math.max(maxLoad,currLoad);
-                    maxLatency = Math.max(maxLatency,currLatency);
+                    minLoad = Math.min(minLoad, currLoad);
+                    minLatency = Math.min(minLatency, currLatency);
+                    maxLoad = Math.max(maxLoad, currLoad);
+                    maxLatency = Math.max(maxLatency, currLatency);
                 }
 
             /*
@@ -139,20 +137,19 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             and select the peer with the lowest score.
              */
 
-                for(String peer : availablePeers){
+                for (String peer : availablePeers) {
                     Peer p = (Peer) Naming.lookup(peer);
                     int currLoad = p.getLoad();
                     float currLatency = latencyMap.get(peer);
-                    float normalizedLoad = minMaxNormalize((float) currLoad,(float) minLoad,(float) maxLoad);
-                    float normalizedLatency = minMaxNormalize(currLatency,minLatency,maxLatency);
-                    float currScore = normalizedLatency + normalizedLoad ;
-                    if(currScore < minScore){
+                    float normalizedLoad = minMaxNormalize((float) currLoad, (float) minLoad, (float) maxLoad);
+                    float normalizedLatency = minMaxNormalize(currLatency, minLatency, maxLatency);
+                    float currScore = normalizedLatency + normalizedLoad;
+                    if (currScore < minScore) {
                         minScore = currScore;
                         minPeer = peer;
                     }
                 }
-            }
-            else{
+            } else {
                 return (String) availablePeers.toArray()[0];
             }
 
@@ -162,19 +159,18 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         return minPeer;
     }
 
-    private void populateLatencyMap(){
-        try{
+    private void populateLatencyMap() {
+        try {
             Scanner scanner = new Scanner(new FileReader("./src/peer/latency.txt"));
-            while(scanner.hasNextLine()){
+            while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
                 String fields[] = line.split(";");
-                if(fields[0].equals(peerURL)){
-                    latencyMap.put(fields[1],Float.parseFloat(fields[2]));
+                if (fields[0].equals(peerURL)) {
+                    latencyMap.put(fields[1], Float.parseFloat(fields[2]));
                 }
             }
             System.out.println("INFO: Latency map successfully populated");
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -183,35 +179,56 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         /*
             Check if the file is already present in this peer
          */
-        for(String file : getListOfFiles()){
-            if(fileName.equals(file)){
+        for (String file : getListOfFiles()) {
+            if (fileName.equals(file)) {
                 System.out.println("INFO: File already present in this peer");
                 return true;
             }
         }
 
+        boolean downloadSuccessful = false;
+
         try {
             Set<String> availablePeers = ts.find(fileName);
-            String optimalPeer = selectOptimalPeer(availablePeers);
-            Peer peerWithFile = (Peer) Naming.lookup(optimalPeer);
-            FileDownloadBundle fileDownloadBundle = peerWithFile.download(fileName);
-            //TODO - add checksum verification
-            FileOutputStream fos = new FileOutputStream("./src/peer/data/peer"+peerId+"/"+fileDownloadBundle.fileName); //TODO - add path
-            fos.write(fileDownloadBundle.fileContents);
-            fileNameSet.add(fileDownloadBundle.fileName);
-            ts.updateFileListForClient(this.peerId, this.fileNameSet);
+            while (!downloadSuccessful) {
+                if (availablePeers.size() < 1) {
+                    System.out.println("INFO: No available peer for file download. ");
+                    return false;
+                }
+                String optimalPeer = selectOptimalPeer(availablePeers);
+                Peer peerWithFile = (Peer) Naming.lookup(optimalPeer);
+                FileDownloadBundle fileDownloadBundle = peerWithFile.download(fileName);
+
+                Checksum checksum = new CRC32();
+                checksum.update(fileDownloadBundle.fileContents, 0, fileDownloadBundle.fileContents.length);
+                long checkSumValue = checksum.getValue();
+                if (checkSumValue != fileDownloadBundle.checksum) {
+                    //retry
+                    availablePeers.remove(optimalPeer);
+                    continue;
+                }
+                FileOutputStream fos = new FileOutputStream("./src/peer/data/peer" +
+                        peerId + "/" + fileDownloadBundle.fileName); //TODO - add path
+                fos.write(fileDownloadBundle.fileContents);
+                fileNameSet.add(fileDownloadBundle.fileName);
+                ts.updateFileListForClient(this.peerId, this.fileNameSet);
+                downloadSuccessful = true;
+            }
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
     }
 
-    private float minMaxNormalize(float value, float min, float max){
-        if(max - min == 0){
+
+    private float minMaxNormalize(float value, float min, float max) {
+        if (max - min == 0) {
             return 0;
         }
-        return (value - min)/(max - min);
+        return (value - min) / (max - min);
     }
+
     /**
      * Updates the file set with files names at the root of the peer.
      */
