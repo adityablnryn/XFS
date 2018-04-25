@@ -50,7 +50,12 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
             return peers;
         }
         System.out.println("ERROR: File not present in any peer");
-        return null;
+        return peers;
+    }
+
+
+    public Set<String> getFileList() {
+        return filePeersMap.keySet();
     }
 
     public boolean updateFileListForClient(int peerId, Set<String> files) {

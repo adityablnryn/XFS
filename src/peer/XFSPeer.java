@@ -213,6 +213,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 fileNameSet.add(fileDownloadBundle.fileName);
                 ts.updateFileListForClient(this.peerId, this.fileNameSet);
                 downloadSuccessful = true;
+                System.out.println("INFO: Download successful");
             }
             return true;
         } catch (Exception e) {
@@ -239,22 +240,38 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 fileNameSet.add(file.getName());
         }
     }
+
+    private void printListofAvailableFiles() {
+        try {
+            Set<String> availableFiles = ts.getFileList();
+            if(availableFiles.size()==0) {
+                System.out.println("No available files");
+                return;
+            }
+            for(String fileName : availableFiles) {
+                System.out.println(fileName);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String[] args) {
         try {
             XFSPeer thisPeer = new XFSPeer();
             while (true) {
-                System.out.println("1 - GetList of files & 2 - Download file");
+                System.out.println("1 - List of files & 2 - Download file");
                 System.out.print("Enter your choice: ");
                 Scanner in = new Scanner(System.in);
                 int choice = in.nextInt();
+                in.nextLine(); //to read the return (enter keypress) after the integer
                 switch (choice){
                     case 1:
-                        //TODO - Get Files and print
+                        thisPeer.printListofAvailableFiles();
                         break;
                     case 2:
-                        //TODO - Get Files and print
+                        thisPeer.printListofAvailableFiles();
                         System.out.print("Enter name of file to download: ");
-                        in.nextLine();
                         String fileToDownload = in.nextLine();
                         thisPeer.getFileFromPeers(fileToDownload);
                         break;
