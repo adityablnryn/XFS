@@ -115,7 +115,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
      * @return
      */
     private String selectOptimalPeer(Set<String> availablePeers){
-        int   minLoad = Integer.MAX_VALUE,
+        int minLoad = Integer.MAX_VALUE,
                 maxLoad = Integer.MIN_VALUE;
         String minPeer = "";
         float minLatency = Float.MAX_VALUE, maxLatency = Float.MIN_VALUE, minScore = Float.MAX_VALUE;
@@ -123,34 +123,39 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             /*
             First calculate the min and max values for latency and load among the available peers
              */
-
-            for(String peer : availablePeers){
-                Peer p = (Peer) Naming.lookup(peer);
-                int currLoad = p.getLoad();
-                float currLatency = latencyMap.get(peer);
-                minLoad = Math.min(minLoad,currLoad);
-                minLatency = Math.min(minLatency,currLatency);
-                maxLoad = Math.max(maxLoad,currLoad);
-                maxLatency = Math.max(maxLatency,currLatency);
-            }
+            if(availablePeers.size() > 1){
+                for(String peer : availablePeers){
+                    Peer p = (Peer) Naming.lookup(peer);
+                    int currLoad = p.getLoad();
+                    float currLatency = latencyMap.get(peer);
+                    minLoad = Math.min(minLoad,currLoad);
+                    minLatency = Math.min(minLatency,currLatency);
+                    maxLoad = Math.max(maxLoad,currLoad);
+                    maxLatency = Math.max(maxLatency,currLatency);
+                }
 
             /*
             Using the above values, calculate the score using normalized values
             and select the peer with the lowest score.
              */
 
-            for(String peer : availablePeers){
-                Peer p = (Peer) Naming.lookup(peer);
-                int currLoad = p.getLoad();
-                float currLatency = latencyMap.get(peer);
-                float normalizedLoad = minMaxNormalize((float) currLoad,(float) minLoad,(float) maxLoad);
-                float normalizedLatency = minMaxNormalize(currLatency,minLatency,maxLatency);
-                float currScore = normalizedLatency + normalizedLoad ;
-                if(currScore < minScore){
-                    minScore = currScore;
-                    minPeer = peer;
+                for(String peer : availablePeers){
+                    Peer p = (Peer) Naming.lookup(peer);
+                    int currLoad = p.getLoad();
+                    float currLatency = latencyMap.get(peer);
+                    float normalizedLoad = minMaxNormalize((float) currLoad,(float) minLoad,(float) maxLoad);
+                    float normalizedLatency = minMaxNormalize(currLatency,minLatency,maxLatency);
+                    float currScore = normalizedLatency + normalizedLoad ;
+                    if(currScore < minScore){
+                        minScore = currScore;
+                        minPeer = peer;
+                    }
                 }
             }
+            else{
+                return (String) availablePeers.toArray()[0];
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -175,6 +180,16 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     }
 
     private boolean getFileFromPeers(String fileName) {
+        /*
+            Check if the file is already present in this peer
+         */
+        for(String file : getListOfFiles()){
+            if(fileName.equals(file)){
+                System.out.println("INFO: File already present in this peer");
+                return true;
+            }
+        }
+
         try {
             Set<String> availablePeers = ts.find(fileName);
             String optimalPeer = selectOptimalPeer(availablePeers);
@@ -192,6 +207,9 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     }
 
     private float minMaxNormalize(float value, float min, float max){
+        if(max - min == 0){
+            return 0;
+        }
         return (value - min)/(max - min);
     }
     /**
