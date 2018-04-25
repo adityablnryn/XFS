@@ -54,11 +54,41 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         }
     }
 
+    /*
+     * Constructor used only for recovery
+     */
+    public XFSPeer(int id) throws RemoteException {
+        try {
+            ts = (TrackingServer) Naming.lookup(trackingServerURL);
+            peerId = id;
+            peerURL = "peer" + peerId;
+            Naming.rebind(peerURL, this);
+            rootDir = new File("./src/peer/data/peer" + peerId);
+            rootDir.mkdir();
+            fileNameSet = new HashSet<>();
+            updateFileNameSet();
+            populateLatencyMap();
+            ts.addPeer(this.peerId, this.peerURL);
+            ts.updateFileListForClient(this.peerId, this.fileNameSet);
+            System.out.println("INFO: Peer " + peerId + " bound successfully");
+        } catch (Exception e) {
+            System.out.println("ERROR: Peer " + peerId + " failed to bind");
+            e.printStackTrace();
+        }
+    }
+
     public void ping() {
         System.out.println("INFO: Peer " + this.peerId + ": PING!");
     }
 
-    public Set<String> getListOfFiles() {
+    public Set<String> getListOfFiles(boolean rebindTrackingServer) {
+        if(rebindTrackingServer) {
+            try {
+                ts = (TrackingServer) Naming.lookup(trackingServerURL);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         return fileNameSet;
     }
 
@@ -175,11 +205,14 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         }
     }
 
+    /*
+     * Get file and compute checksum. Retry download if necessary
+     */
     private boolean getFileFromPeers(String fileName) {
         /*
             Check if the file is already present in this peer
          */
-        for (String file : getListOfFiles()) {
+        for (String file : getListOfFiles(false)) {
             if (fileName.equals(file)) {
                 System.out.println("INFO: File already present in this peer");
                 return true;
@@ -273,7 +306,9 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                         thisPeer.printListofAvailableFiles();
                         System.out.print("Enter name of file to download: ");
                         String fileToDownload = in.nextLine();
+                        thisPeer.preDownload();
                         thisPeer.getFileFromPeers(fileToDownload);
+                        thisPeer.postDownload();
                         break;
                     default:
                         System.out.println("Invalid Choice");
