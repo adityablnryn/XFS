@@ -214,7 +214,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 ts.updateFileListForClient(this.peerId, this.fileNameSet);
                 downloadSuccessful = true;
             }
-
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
         }
