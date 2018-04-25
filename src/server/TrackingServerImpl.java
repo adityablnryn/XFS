@@ -22,7 +22,7 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
     public TrackingServerImpl() throws RemoteException {
         try {
             Naming.rebind("ts", this);
-            //getPeerListFromFile();
+            getPeerListFromFile();
             System.out.println("INFO: Tracking server bound");
         } catch (Exception e) {
             e.printStackTrace();
@@ -37,6 +37,7 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
 
     public boolean addPeer(int id, String url) {
         peerAddressMap.put(id, url);
+        writePeerAddressMapToFile();
         return false;
     }
 
@@ -86,7 +87,7 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
                     line -> peerAddressMap.putIfAbsent(Integer.valueOf(line.split(DATA_SEPARATION)[0]), line.split(DATA_SEPARATION)[1])
             );
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("INFO: No Peer List File Found");
         }
     }
 }
