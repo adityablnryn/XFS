@@ -7,7 +7,6 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
@@ -38,6 +37,7 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
 
     public boolean addPeer(int id, String url) {
         peerAddressMap.put(id, url);
+        writePeerAddressMapToFile();
         return false;
     }
 
@@ -53,9 +53,15 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
         return null;
     }
 
-    public boolean updateFileListForClient(int peerId, List<String> files) {
+    public boolean updateFileListForClient(int peerId, Set<String> files) {
         // look at each file and add peer Id to the set (brute force)
-        return false;
+        for(String file : files) {
+            if(!filePeersMap.containsKey(file)) {
+                filePeersMap.put(file, new HashSet<>());
+            }
+            filePeersMap.get(file).add(peerId);
+        }
+        return true;
     }
 
 
@@ -81,7 +87,7 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
                     line -> peerAddressMap.putIfAbsent(Integer.valueOf(line.split(DATA_SEPARATION)[0]), line.split(DATA_SEPARATION)[1])
             );
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("INFO: No Peer List File Found");
         }
     }
 }

@@ -12,6 +12,7 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.zip.CRC32;
@@ -21,13 +22,11 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
 
     private int peerId;
     private File rootDir;
-    private Set<String> fileNameSet; //TODO - use this variable
+    private HashSet<String> fileNameSet; //TODO - use this variable
     private int load = 0;
     private String trackingServerURL = "//localhost/ts";
     private TrackingServer ts;
     private String peerURL;
-
-    //TODO: Implement reading latency matrix from file
     private HashMap<String,Float> latencyMap = new HashMap<>();
 
     public XFSPeer() throws RemoteException {
@@ -40,9 +39,11 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 Naming.rebind(peerURL, this);
                 rootDir  = new File("./src/peer/data/peer" + peerId);
                 rootDir.mkdir();
+                fileNameSet = new HashSet<>();
                 updateFileNameSet();
                 populateLatencyMap();
-                ts.addPeer(this.peerId, peerURL);
+                ts.addPeer(this.peerId, this.peerURL);
+                ts.updateFileListForClient(this.peerId, this.fileNameSet);
                 System.out.println("INFO: Peer " + peerId + " bound successfully");
             }
             else{
@@ -86,7 +87,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         try {
             preDownload();
             // find relevant file
-            Path path = Paths.get("file_path_here"); //TODO - add file path
+            Path path = Paths.get("./src/peer/data/peer"+peerId+"/"+fileName); //TODO - add file path
 
             // convert contents to byte array
             byte[] fileContents = Files.readAllBytes(path);
@@ -114,7 +115,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
      * @return
      */
     private String selectOptimalPeer(Set<String> availablePeers){
-        int   minLoad = Integer.MAX_VALUE,
+        int minLoad = Integer.MAX_VALUE,
                 maxLoad = Integer.MIN_VALUE;
         String minPeer = "";
         float minLatency = Float.MAX_VALUE, maxLatency = Float.MIN_VALUE, minScore = Float.MAX_VALUE;
@@ -122,34 +123,39 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             /*
             First calculate the min and max values for latency and load among the available peers
              */
-
-            for(String peer : availablePeers){
-                Peer p = (Peer) Naming.lookup(peer);
-                int currLoad = p.getLoad();
-                float currLatency = latencyMap.get(peer);
-                minLoad = Math.min(minLoad,currLoad);
-                minLatency = Math.min(minLatency,currLatency);
-                maxLoad = Math.max(maxLoad,currLoad);
-                maxLatency = Math.max(maxLatency,currLatency);
-            }
+            if(availablePeers.size() > 1){
+                for(String peer : availablePeers){
+                    Peer p = (Peer) Naming.lookup(peer);
+                    int currLoad = p.getLoad();
+                    float currLatency = latencyMap.get(peer);
+                    minLoad = Math.min(minLoad,currLoad);
+                    minLatency = Math.min(minLatency,currLatency);
+                    maxLoad = Math.max(maxLoad,currLoad);
+                    maxLatency = Math.max(maxLatency,currLatency);
+                }
 
             /*
             Using the above values, calculate the score using normalized values
             and select the peer with the lowest score.
              */
 
-            for(String peer : availablePeers){
-                Peer p = (Peer) Naming.lookup(peer);
-                int currLoad = p.getLoad();
-                float currLatency = latencyMap.get(peer);
-                float normalizedLoad = minMaxNormalize((float) currLoad,(float) minLoad,(float) maxLoad);
-                float normalizedLatency = minMaxNormalize(currLatency,minLatency,maxLatency);
-                float currScore = normalizedLatency + normalizedLoad ;
-                if(currScore < minScore){
-                    minScore = currScore;
-                    minPeer = peer;
+                for(String peer : availablePeers){
+                    Peer p = (Peer) Naming.lookup(peer);
+                    int currLoad = p.getLoad();
+                    float currLatency = latencyMap.get(peer);
+                    float normalizedLoad = minMaxNormalize((float) currLoad,(float) minLoad,(float) maxLoad);
+                    float normalizedLatency = minMaxNormalize(currLatency,minLatency,maxLatency);
+                    float currScore = normalizedLatency + normalizedLoad ;
+                    if(currScore < minScore){
+                        minScore = currScore;
+                        minPeer = peer;
+                    }
                 }
             }
+            else{
+                return (String) availablePeers.toArray()[0];
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -174,13 +180,23 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     }
 
     private boolean getFileFromPeers(String fileName) {
+        /*
+            Check if the file is already present in this peer
+         */
+        for(String file : getListOfFiles()){
+            if(fileName.equals(file)){
+                System.out.println("INFO: File already present in this peer");
+                return true;
+            }
+        }
+
         try {
             Set<String> availablePeers = ts.find(fileName);
             String optimalPeer = selectOptimalPeer(availablePeers);
             Peer peerWithFile = (Peer) Naming.lookup(optimalPeer);
             FileDownloadBundle fileDownloadBundle = peerWithFile.download(fileName);
             //TODO - add checksum verification
-            FileOutputStream fos = new FileOutputStream("path_here"+fileDownloadBundle.fileName); //TODO - add path
+            FileOutputStream fos = new FileOutputStream("./src/peer/data/peer"+peerId+"/"+fileDownloadBundle.fileName); //TODO - add path
             fos.write(fileDownloadBundle.fileContents);
             fileNameSet.add(fileDownloadBundle.fileName);
             ts.updateFileListForClient(this.peerId, this.fileNameSet);
@@ -191,6 +207,9 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     }
 
     private float minMaxNormalize(float value, float min, float max){
+        if(max - min == 0){
+            return 0;
+        }
         return (value - min)/(max - min);
     }
     /**
@@ -218,6 +237,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                     case 2:
                         //TODO - Get Files and print
                         System.out.print("Enter name of file to download: ");
+                        in.nextLine();
                         String fileToDownload = in.nextLine();
                         thisPeer.getFileFromPeers(fileToDownload);
                         break;
