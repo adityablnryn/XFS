@@ -21,7 +21,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
 
     private int peerId;
     private File rootDir;
-    private Set<String> fileList; //TODO - use this variable
+    private Set<String> fileNameSet; //TODO - use this variable
     private int load = 0;
     private String trackingServerURL = "//localhost/ts";
     private TrackingServer ts;
@@ -40,6 +40,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 Naming.rebind(peerURL, this);
                 rootDir  = new File("./src/peer/data/peer" + peerId);
                 rootDir.mkdir();
+                updateFileNameSet();
                 populateLatencyMap();
                 ts.addPeer(this.peerId, peerURL);
                 System.out.println("INFO: Peer " + peerId + " bound successfully");
@@ -59,7 +60,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     }
 
     public Set<String> getListOfFiles() {
-        return fileList;
+        return fileNameSet;
     }
 
     public int getLoad() {
@@ -181,8 +182,8 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             //TODO - add checksum verification
             FileOutputStream fos = new FileOutputStream("path_here"+fileDownloadBundle.fileName); //TODO - add path
             fos.write(fileDownloadBundle.fileContents);
-            fileList.add(fileDownloadBundle.fileName);
-            ts.updateFileListForClient(this.peerId, this.fileList);
+            fileNameSet.add(fileDownloadBundle.fileName);
+            ts.updateFileListForClient(this.peerId, this.fileNameSet);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -192,7 +193,16 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     private float minMaxNormalize(float value, float min, float max){
         return (value - min)/(max - min);
     }
-
+    /**
+     * Updates the file set with files names at the root of the peer.
+     */
+    private void updateFileNameSet() {
+        File[] fileList = rootDir.listFiles();
+        for (File file : fileList) {
+            if (file.isFile())
+                fileNameSet.add(file.getName());
+        }
+    }
     public static void main(String[] args) {
         try {
             XFSPeer thisPeer = new XFSPeer();
