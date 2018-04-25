@@ -1,21 +1,24 @@
 package server;
 
-import peer.Peer;
-
-import java.io.File;
-import java.io.PrintStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 public class TrackingServerImpl extends UnicastRemoteObject implements TrackingServer {
 
+    private final String PEER_LIST_PATH = "./src/server/peerListFile.txt";
+    private final String DATA_SEPARATION = ":";
     private int nextPeerId = 0;
     private ConcurrentHashMap<String, Set<Integer>> filePeersMap = new ConcurrentHashMap<>();
     private ConcurrentHashMap<Integer, String> peerAddressMap = new ConcurrentHashMap<>();
-    private File peerListFile = new File("./src/server/peerListFile.txt");
 
     public TrackingServerImpl() throws RemoteException {
         try {
@@ -40,8 +43,8 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
 
     public Set<String> find(String fileName) {
         Set<String> peers = new HashSet<>();
-        if(filePeersMap.containsKey(fileName)){
-            for(int peer : filePeersMap.get(fileName)){
+        if (filePeersMap.containsKey(fileName)) {
+            for (int peer : filePeersMap.get(fileName)) {
                 peers.add(peerAddressMap.get(peer));
             }
             return peers;
@@ -56,33 +59,29 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
     }
 
 
-
-    // TODO - update method to write id and url
-    private void writePeerToFile(){
-        System.out.println("INFO: Writing list to file");
+    /**
+     * Function to write the Peer Map to a file.
+     */
+    private void writePeerAddressMapToFile() {
         try {
-            PrintStream fileStream = new PrintStream(peerListFile);
-            /*for(String peer: peers) {
-                fileStream.println(peer);
-            }*/
-            fileStream.close();
-            System.out.println("INFO: Peer list successfully written into file");
-        } catch (Exception e) {
+            Files.write(Paths.get(PEER_LIST_PATH), () -> peerAddressMap.entrySet().stream()
+                    .<CharSequence>map(e -> e.getKey() + DATA_SEPARATION + e.getValue())
+                    .iterator());
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    // TODO - update the map
-    private void getPeerListFromFile(){
-        System.out.println("INFO: Reading from peerListFile");
-        /*try{
-            Scanner scanner = new Scanner(new FileReader("./src/server/peerListFile.txt"));
-            while(scanner.hasNextLine()){
-                peers.add(scanner.nextLine());
-            }
-        }
-        catch (Exception e){
+    /**
+     * Function to read from the file and populate the Peer Map.
+     */
+    private void getPeerListFromFile() {
+        try (Stream<String> lines = Files.lines(Paths.get(PEER_LIST_PATH))) {
+            lines.filter(line -> line.contains(DATA_SEPARATION)).forEach(
+                    line -> peerAddressMap.putIfAbsent(Integer.valueOf(line.split(DATA_SEPARATION)[0]), line.split(DATA_SEPARATION)[1])
+            );
+        } catch (IOException e) {
             e.printStackTrace();
-        }*/
+        }
     }
 }
