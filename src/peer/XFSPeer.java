@@ -198,7 +198,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 String optimalPeer = selectOptimalPeer(availablePeers);
                 Peer peerWithFile = (Peer) Naming.lookup(optimalPeer);
                 FileDownloadBundle fileDownloadBundle = peerWithFile.download(fileName);
-                //TODO - add checksum verification
+
                 Checksum checksum = new CRC32();
                 checksum.update(fileDownloadBundle.fileContents, 0, fileDownloadBundle.fileContents.length);
                 long checkSumValue = checksum.getValue();
