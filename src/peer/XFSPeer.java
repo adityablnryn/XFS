@@ -87,7 +87,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
         try {
             preDownload();
             // find relevant file
-            Path path = Paths.get("file_path_here"); //TODO - add file path
+            Path path = Paths.get("./src/peer/data/peer"+peerId+"/"+fileName); //TODO - add file path
 
             // convert contents to byte array
             byte[] fileContents = Files.readAllBytes(path);
@@ -181,7 +181,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             Peer peerWithFile = (Peer) Naming.lookup(optimalPeer);
             FileDownloadBundle fileDownloadBundle = peerWithFile.download(fileName);
             //TODO - add checksum verification
-            FileOutputStream fos = new FileOutputStream("path_here"+fileDownloadBundle.fileName); //TODO - add path
+            FileOutputStream fos = new FileOutputStream("./src/peer/data/peer"+peerId+"/"+fileDownloadBundle.fileName); //TODO - add path
             fos.write(fileDownloadBundle.fileContents);
             fileNameSet.add(fileDownloadBundle.fileName);
             ts.updateFileListForClient(this.peerId, this.fileNameSet);
