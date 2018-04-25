@@ -1,0 +1,12 @@
+peer0;peer1;600
+peer1;peer0;700
+peer0;peer2;800
+peer2;peer0;900
+peer0;peer3;1000
+peer3;peer0;1100
+peer1;peer2;600
+peer2;peer1;700
+peer1;peer3;900
+peer3;peer1;1000
+peer2;peer3;1400
+peer3;peer2;1500
