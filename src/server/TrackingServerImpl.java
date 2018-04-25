@@ -7,7 +7,6 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
@@ -23,7 +22,7 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
     public TrackingServerImpl() throws RemoteException {
         try {
             Naming.rebind("ts", this);
-            getPeerListFromFile();
+            //getPeerListFromFile();
             System.out.println("INFO: Tracking server bound");
         } catch (Exception e) {
             e.printStackTrace();
@@ -53,9 +52,15 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
         return null;
     }
 
-    public boolean updateFileListForClient(int peerId, List<String> files) {
+    public boolean updateFileListForClient(int peerId, Set<String> files) {
         // look at each file and add peer Id to the set (brute force)
-        return false;
+        for(String file : files) {
+            if(!filePeersMap.containsKey(file)) {
+                filePeersMap.put(file, new HashSet<>());
+            }
+            filePeersMap.get(file).add(peerId);
+        }
+        return true;
     }
 
 

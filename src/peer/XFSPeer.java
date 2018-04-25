@@ -12,6 +12,7 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.zip.CRC32;
@@ -21,13 +22,11 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
 
     private int peerId;
     private File rootDir;
-    private Set<String> fileNameSet; //TODO - use this variable
+    private HashSet<String> fileNameSet; //TODO - use this variable
     private int load = 0;
     private String trackingServerURL = "//localhost/ts";
     private TrackingServer ts;
     private String peerURL;
-
-    //TODO: Implement reading latency matrix from file
     private HashMap<String,Float> latencyMap = new HashMap<>();
 
     public XFSPeer() throws RemoteException {
@@ -40,9 +39,11 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 Naming.rebind(peerURL, this);
                 rootDir  = new File("./src/peer/data/peer" + peerId);
                 rootDir.mkdir();
+                fileNameSet = new HashSet<>();
                 updateFileNameSet();
                 populateLatencyMap();
-                ts.addPeer(this.peerId, peerURL);
+                ts.addPeer(this.peerId, this.peerURL);
+                ts.updateFileListForClient(this.peerId, this.fileNameSet);
                 System.out.println("INFO: Peer " + peerId + " bound successfully");
             }
             else{
@@ -218,6 +219,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                     case 2:
                         //TODO - Get Files and print
                         System.out.print("Enter name of file to download: ");
+                        in.nextLine();
                         String fileToDownload = in.nextLine();
                         thisPeer.getFileFromPeers(fileToDownload);
                         break;
