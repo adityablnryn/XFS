@@ -11,10 +11,7 @@ import java.nio.file.Paths;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -187,6 +184,17 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
             e.printStackTrace();
         }
         return minPeer;
+    }
+
+    /**
+     * Returns a random peer from the available peers list
+     * @param availablePeers
+     * @return
+     */
+
+    private String selectRandomPeer(Set<String> availablePeers){
+        Random r = new Random();
+        return (String) availablePeers.toArray()[r.nextInt() % availablePeers.size()];
     }
 
     private void populateLatencyMap() {
