@@ -146,7 +146,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
                 float currScore = normalizedLatency + normalizedLoad ;
                 if(currScore < minScore){
                     minScore = currScore;
-                    minPeer.concat(peer);
+                    minPeer = peer;
                 }
             }
         } catch (Exception e) {
