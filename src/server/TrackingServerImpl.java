@@ -1,5 +1,7 @@
 package server;
 
+import peer.Peer;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -7,6 +9,7 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
@@ -23,6 +26,7 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
         try {
             Naming.rebind("ts", this);
             getPeerListFromFile();
+            populateFilePeersMap();
             System.out.println("INFO: Tracking server bound");
         } catch (Exception e) {
             e.printStackTrace();
@@ -67,6 +71,24 @@ public class TrackingServerImpl extends UnicastRemoteObject implements TrackingS
             filePeersMap.get(file).add(peerId);
         }
         return true;
+    }
+
+
+    /*
+     * Function used to re-populate file-peer mapping after tracking server crash
+     */
+    private void populateFilePeersMap() {
+        Peer peer;
+        for(Map.Entry<Integer, String> entry : peerAddressMap.entrySet()) {
+            try {
+                peer = (Peer) Naming.lookup(entry.getValue());
+                updateFileListForClient(entry.getKey(), peer.getListOfFiles(true));
+                System.out.println("RECOVERY: Updated File list for peer "+entry.getKey());
+            } catch (Exception e) {
+                peerAddressMap.remove(entry.getKey());
+                System.out.println("RECOVERY: Peer "+entry.getKey()+" not available");
+            }
+        }
     }
 
 
