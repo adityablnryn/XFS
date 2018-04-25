@@ -55,7 +55,7 @@ public class XFSPeer extends UnicastRemoteObject implements Peer {
     }
 
     /*
-     * Constructor used only for recovery
+     * Constructor used only for recovery (and Testing)
      */
     public XFSPeer(int id) throws RemoteException {
         try {
